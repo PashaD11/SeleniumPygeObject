@@ -55,17 +55,14 @@ class BasePage:
 
     @step
     def click_in_list_by_text(self, locator_of_list: str, text: str, exact=True):
-        # TODO need to check that element is clickable
         element_list = self.wait_all_elements(locator_of_list)
         for element in element_list:
-            if exact:
-                if self._get_text_from_element(element) == text:
-                    element.click()
-                    break
-            else:
-                if text in self._get_text_from_element(element):
-                    element.click()
-                    break
+            if exact and self._get_text_from_element(element) == text:
+                WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(ec.element_to_be_clickable(element)).click()
+                break
+            elif text in self._get_text_from_element(element):
+                WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(ec.element_to_be_clickable(element)).click()
+                break
         else:
             pytest.fail(f"Cant find element with text - {text}")
 
