@@ -6,10 +6,11 @@ from settings import URL, User
 class TestLogin:
     def test_login_positive(self, driver):
         login_page = LoginPage(driver)
-        login_page.go_to(URL)
-        login_page.username = User.STANDART
-        login_page.password = User.STANDART_PASS
-        login_page.login()
-
         inventory_page = InventoryPage(driver)
-        assert inventory_page.is_peek_present, "Login failed"
+
+        login_page.go_to(URL)
+        login_page.enter_username(User.STANDARD)
+        login_page.enter_password(User.STANDARD_PASS)
+        login_page.click_login_button()
+
+        assert inventory_page.check_peek_present, "Login failed"

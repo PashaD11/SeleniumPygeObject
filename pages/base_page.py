@@ -1,7 +1,6 @@
 from typing import List, Callable
 
 import pytest
-from allure_commons._allure import step
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, NoAlertPresentException
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
@@ -9,6 +8,8 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
+
+from helpers.step import step
 
 EXPLICIT_TIMEOUT = 20
 
