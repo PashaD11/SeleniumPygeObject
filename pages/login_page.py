@@ -33,3 +33,7 @@ class LoginPage(MainPage):
     @step
     def check_login_successful(self):
         return self.check_element_visible(loc.user_icon)
+
+    @step
+    def check_warning_present(self):
+        return self.check_element_visible(loc.login_warning)
