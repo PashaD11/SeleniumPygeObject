@@ -1,8 +1,13 @@
 import os
+from dotenv import load_dotenv
 
-URL = os.getenv("URL")
+load_dotenv()
 
+
+class URL:
+    MAIN = os.getenv("MAIN_URL")
+    LOGIN = "login"
 
 class User:
-    STANDART = os.getenv("USER_STANDART")
-    STANDART_PASS = os.getenv("USER_STANDART_PASS")
+    MAIL = os.getenv("USER_MAIL")
+    PASSWORD = os.getenv("USER_PASSWORD")

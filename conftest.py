@@ -2,9 +2,9 @@ import allure
 import pytest
 from selenium import webdriver
 from selenium.webdriver import ChromeOptions
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-SELENOID = False
 
 
 @pytest.fixture()
@@ -15,18 +15,11 @@ def driver(request):
     options.add_argument("--disable-notifications")
     options.add_argument('--ignore-certificate-errors')
     options.add_argument('--allow-running-insecure-content')
-    if SELENOID:
-        capabilities = {
-            "browserName": "chrome",
-            "version": "90.0",
-            "screenResolution": "1920x1080x24",
-            "sessionTimeout": "300s",
-            "enableVNC": True,
-        }
-        driver = webdriver.Remote("http://localhost:8080//wd/hub", desired_capabilities=capabilities, options=options)
-    else:
-        # TODO use Service instead executable_path
-        driver = webdriver.Chrome(executable_path=ChromeDriverManager().install(), options=options)
+
+    service = Service(ChromeDriverManager().install())
+
+    driver = webdriver.Chrome(service=service, options=options)
+
     driver.maximize_window()
 
     yield driver

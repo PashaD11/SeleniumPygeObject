@@ -1,15 +1,15 @@
-from pages.inventory_page import InventoryPage
 from pages.login_page import LoginPage
 from settings import URL, User
 
 
 class TestLogin:
     def test_login_positive(self, driver):
-        login_page = LoginPage(driver)
-        login_page.go_to(URL)
-        login_page.username = User.STANDART
-        login_page.password = User.STANDART_PASS
-        login_page.login()
+        email = User.MAIL
+        password = User.PASSWORD
 
-        inventory_page = InventoryPage(driver)
-        assert inventory_page.is_peek_present, "Login failed"
+        login_page = LoginPage(driver)
+        login_page.go_to(URL.MAIN + URL.LOGIN)
+        login_page.enter_email(email)
+        login_page.enter_password(password)
+        login_page.click_login_button()
+        assert login_page.check_login_successful(), f"User {email} has not logged in"
