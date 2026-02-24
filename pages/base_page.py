@@ -33,21 +33,27 @@ class BasePage:
 
     @step
     def wait_element(self, locator: str, condition: Callable = ec.presence_of_element_located, timeout=EXPLICIT_TIMEOUT,
-                     by=By.CSS_SELECTOR) -> WebElement:
+                     by=By.CSS_SELECTOR, parent=None) -> WebElement:
         if locator.startswith("//"):
             by = By.XPATH
-        return WebDriverWait(self.driver, timeout).until(condition((by, locator)))
+        if not parent:
+            parent = self.driver
+        return WebDriverWait(parent, timeout).until(condition((by, locator)))
 
     @step
     def wait_all_elements(self, locator: str, condition: Callable = ec.presence_of_all_elements_located,
-                          timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR) -> List[WebElement]:
+                          timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR, parent=None) -> List[WebElement]:
         if locator.startswith("//"):
             by = By.XPATH
-        return WebDriverWait(self.driver, timeout).until(condition((by, locator)))
+        if not parent:
+            parent = self.driver
+        return WebDriverWait(parent, timeout).until(condition((by, locator)))
 
     @step
-    def click_on(self, locator: str, timeout=EXPLICIT_TIMEOUT, scroll=True) -> WebElement:
-        element = self.wait_element(locator, ec.element_to_be_clickable, timeout)
+    def click_on(self, locator: str, timeout=EXPLICIT_TIMEOUT, scroll=True, parent=None) -> WebElement:
+        if not parent:
+            parent = self.driver
+        element = self.wait_element(locator, ec.element_to_be_clickable, timeout, parent=parent)
         if scroll:
             element.location_once_scrolled_into_view
         element.click()
@@ -152,8 +158,10 @@ class BasePage:
 
     # GET:
     @step
-    def get_text(self, locator: str, timeout=EXPLICIT_TIMEOUT) -> str:
-        element = self.wait_element(locator, ec.visibility_of_element_located, timeout=timeout)
+    def get_text(self, locator: str, timeout=EXPLICIT_TIMEOUT, parent=None) -> str:
+        if not parent:
+            parent = self.driver
+        element = self.wait_element(locator, ec.visibility_of_element_located, timeout=timeout, parent=parent)
         return self._get_text_from_element(element)
 
     @step

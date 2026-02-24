@@ -19,15 +19,17 @@ class LoginPage(MainPage):
     def click_login_button(self):
         self.click_on(loc.login_button)
 
-    def sing_in(self, email, password):
-        # use this method as a shortcut for quick sign-in in each test
+    def login_and_go_to(self, email, password, url=None):
+        # use this method as a shortcut for quick login in each test
         # it is an exception to use assert inside page object
         assert URL.MAIN, "Main URL not found. Perhaps environment variables hasn't been set?"
-        self.go_to(URL.MAIN)
+        self.go_to(URL.MAIN + URL.LOGIN)
         self.enter_email(email)
         self.enter_password(password)
         self.click_login_button()
         assert self.check_login_successful(), f"Customer {email} has not signed in"
+        if url:
+            self.go_to(URL.MAIN + url)
 
     # Checks
     @step

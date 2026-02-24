@@ -1,0 +1,5 @@
+product_list = 'div.single-products'
+product_name = 'div.productinfo p'
+product_add_to_cart_button = 'div.productinfo a.add-to-cart'
+cart_modal = 'div#cartModal.show'
+cart_modal_view_cart_link = '#cartModal a[href="/view_cart"]'

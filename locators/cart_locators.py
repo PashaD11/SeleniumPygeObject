@@ -1,0 +1,5 @@
+product_list = 'tr[id^="product-"]'
+product_name = 'td.cart_description a'
+product_price = 'td.cart_price'
+product_quantity = 'td.cart_quantity'
+product_delete_button = 'td.cart_delete'
