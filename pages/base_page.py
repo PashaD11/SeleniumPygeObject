@@ -1,15 +1,15 @@
 from typing import List, Callable
 
 import pytest
+from allure_commons._allure import step
 from selenium.common.exceptions import TimeoutException, NoSuchElementException, NoAlertPresentException
+from selenium.webdriver import Keys
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.ui import WebDriverWait
-
-from helpers.step import step
 
 EXPLICIT_TIMEOUT = 20
 
@@ -34,21 +34,25 @@ class BasePage:
 
     @step
     def wait_element(self, locator: str, condition: Callable = ec.presence_of_element_located, timeout=EXPLICIT_TIMEOUT,
-                     by=By.CSS_SELECTOR) -> WebElement:
+                     by=By.CSS_SELECTOR, parent=None) -> WebElement:
         if locator.startswith("//"):
             by = By.XPATH
-        return WebDriverWait(self.driver, timeout).until(condition((by, locator)))
+        parent = self.driver if not parent else parent
+        return WebDriverWait(parent, timeout).until(condition((by, locator)))
 
     @step
     def wait_all_elements(self, locator: str, condition: Callable = ec.presence_of_all_elements_located,
-                          timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR) -> List[WebElement]:
+                          timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR, parent=None) -> List[WebElement]:
         if locator.startswith("//"):
             by = By.XPATH
-        return WebDriverWait(self.driver, timeout).until(condition((by, locator)))
+        parent = self.driver if not parent else parent
+        return WebDriverWait(parent, timeout).until(condition((by, locator)))
 
     @step
-    def click_on(self, locator: str, timeout=EXPLICIT_TIMEOUT, scroll=True) -> WebElement:
-        element = self.wait_element(locator, ec.element_to_be_clickable, timeout)
+    def click_on(self, locator: str, timeout=EXPLICIT_TIMEOUT, scroll=True, by_js=False, parent=None) -> WebElement:
+        if by_js:  # works with CSS selectors
+            return self.driver.execute_script(f"return document.querySelector('{locator}').click()")
+        element = self.wait_element(locator, ec.element_to_be_clickable, timeout=timeout, parent=parent)
         if scroll:
             element.location_once_scrolled_into_view
         element.click()
@@ -56,28 +60,38 @@ class BasePage:
 
     @step
     def click_in_list_by_text(self, locator_of_list: str, text: str, exact=True):
+        # TODO need to check that element is clickable
         element_list = self.wait_all_elements(locator_of_list)
+        text = str(text)
         for element in element_list:
-            if exact and self._get_text_from_element(element) == text:
-                WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(ec.element_to_be_clickable(element)).click()
-                break
-            elif text in self._get_text_from_element(element):
-                WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(ec.element_to_be_clickable(element)).click()
-                break
+            if exact:
+                if self._get_text_from_element(element) == text:
+                    element.click()
+                    break
+            else:
+                if text in self._get_text_from_element(element):
+                    element.click()
+                    break
         else:
             pytest.fail(f"Cant find element with text - {text}")
 
     @step
-    def click_in_list_by_num(self, locator_of_list: str, num: int, scroll=False):
+    def click_in_list_by_num(self, locator_of_list: str, num: int, scroll=False, by_js=False):
         # TODO need to check that element is clickable
+        if by_js:  # works with CSS selectors
+            return self.driver.execute_script(f"return document.querySelectorAll('{locator_of_list}')[{num}].click()")
         element_list = self.wait_all_elements(locator_of_list, ec.visibility_of_all_elements_located)
         if scroll:
             element_list[num].location_once_scrolled_into_view
         element_list[num].click()
 
-    def enter_text(self, locator: str, text: str, timeout=EXPLICIT_TIMEOUT):
+    def enter_text(self, locator: str, text: str, timeout=EXPLICIT_TIMEOUT, backspace=False):
         element = self.wait_element(locator, ec.element_to_be_clickable, timeout)
-        element.clear()
+        if backspace:
+            element.location_once_scrolled_into_view
+            element.send_keys(Keys.BACKSPACE * len(self._get_text_from_element(element)))
+        else:
+            element.clear()
         element.send_keys(text)
 
     def enter_input_value(self, locator: str, text: str, timeout=EXPLICIT_TIMEOUT):
@@ -135,6 +149,11 @@ class BasePage:
         self.driver.switch_to.window(self.driver.window_handles[num])
 
     @step
+    def close_current_tab(self):
+        self.driver.close()
+        self.driver.switch_to.window(self.driver.window_handles[0])
+
+    @step
     def wait_page_load(self):
         WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(self.ec_wait_page_load)
 
@@ -148,24 +167,64 @@ class BasePage:
     def confirm_alert(self):
         self.driver.switch_to.alert.accept()
 
+    @step
+    def wait_url_matches(self, pattern):
+        WebDriverWait(self.driver, EXPLICIT_TIMEOUT).until(ec.url_matches(pattern))
+
     # GET:
     @step
-    def get_text(self, locator: str, timeout=EXPLICIT_TIMEOUT) -> str:
-        element = self.wait_element(locator, ec.visibility_of_element_located, timeout=timeout)
+    def get_text(self, locator: str, timeout=EXPLICIT_TIMEOUT, by_js=False, scroll=False, parent=None) -> str:
+        if by_js:  # works with CSS selectors
+            return self.driver.execute_script(f"return document.querySelector('{locator}').value")
+        element = self.wait_element(locator, ec.visibility_of_element_located, timeout=timeout, parent=parent)
+        if scroll:
+            element.location_once_scrolled_into_view
         return self._get_text_from_element(element)
+
+    @step
+    def get_select_option_list(self, locator: str, timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR, parent=None):
+        if locator.startswith("//"):
+            by = By.XPATH
+        parent = self.driver if not parent else parent
+        select = Select(WebDriverWait(parent, timeout).until(ec.visibility_of_element_located((by, locator))))
+        return [option.get_attribute("value") for option in select.options]
+
+    @step
+    def get_selected_option(self, locator: str, timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR, parent=None):
+        if locator.startswith("//"):
+            by = By.XPATH
+        parent = self.driver if not parent else parent
+        select = Select(WebDriverWait(parent, timeout).until(ec.visibility_of_element_located((by, locator))))
+        return select.first_selected_option.get_attribute("value")
 
     @step
     def get_text_with_wait(self, locator: str, text: str, timeout=EXPLICIT_TIMEOUT, by=By.CSS_SELECTOR):
         if locator.startswith("//"):
             by = By.XPATH
-        WebDriverWait(self.driver, timeout).until(ec.text_to_be_present_in_element((by, locator), text))
-        return self.get_text(locator)
+        try:
+            WebDriverWait(self.driver, timeout).until(ec.text_to_be_present_in_element((by, locator), text))
+        finally:
+            return self.get_text(locator)
 
     @step
-    def get_text_list(self, locator: str, timeout=EXPLICIT_TIMEOUT) -> List[str]:
+    def get_text_list(self, locator: str, timeout=EXPLICIT_TIMEOUT, by_js=False, parent=None) -> List[str]:
+        if by_js:  # suitable in case Selenium collects an empty text because the text element is not visible
+            if by_js is True:
+                by_js = "textContent"
+            text_list = self.driver.execute_script(
+                f'''f = function() {{
+                    text_list = []; 
+                    document.querySelectorAll("{locator}").
+                        forEach(function(element) 
+                            {{text_list.push(element.{by_js})}}); 
+                    return text_list;}} 
+                return f();'''
+            )
+            return text_list
+
         text_list = []
         try:
-            element_list = self.wait_all_elements(locator, timeout=timeout)
+            element_list = self.wait_all_elements(locator, timeout=timeout, parent=parent)
         except TimeoutException:
             return []
         for element in element_list:
